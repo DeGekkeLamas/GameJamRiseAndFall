@@ -8,9 +8,11 @@ public class SpawnTrees : MonoBehaviour
     public List<GameObject> prefabsOfTrees;
     public List<GameObject> spawnedTrees = new();
     public List<Vector2> aditionalPositionsToCheckConnection;
+    public List<Vector2> generatedPositions = new();
+    [SerializeField] public List<GraphNode> graph = new List<GraphNode>();
     public int treeCount;
-    public int minDistance;
-    public int maxDistance;
+    public int minDistanceBetweenTrees;
+    public int maxDistanceBetweenTrees;
     public Transform treeContainer;
     public Vector2 spawnableAreaMin;
     public Vector2 spawnableAreaMax;
@@ -25,15 +27,18 @@ public class SpawnTrees : MonoBehaviour
     [ContextMenu("GenerateTrees")]
     public void GenerateTrees()
     {
+        //bool generationDone = false;
         ClearTrees();
-        List<Vector2> chosenPositions = new();
+        generatedPositions.Clear();
         do {
-            Vector2 pos = PickRandomPosInArea(spawnableAreaMin, spawnableAreaMax, chosenPositions.ToArray());
-            chosenPositions.Add(pos);
+            Vector2 pos = PickRandomPosInArea(spawnableAreaMin, spawnableAreaMax, generatedPositions.ToArray());
+            generatedPositions.Add(pos);
             int randomTreeType = Random.Range(0, prefabsOfTrees.Count);
             Vector3 position = new Vector3(pos.x, 0, pos.y);
             spawnedTrees.Add(Instantiate(prefabsOfTrees[randomTreeType], position, Quaternion.identity, treeContainer));
-        } while (TestSmallestDistance(chosenPositions.ToArray()));
+            
+
+        } while (TestSmallestDistance(generatedPositions.ToArray()) || !TestPathThroughTrees(generatedPositions.ToList()));
     }
 
     private Vector2 PickRandomPosInArea(Vector2 min, Vector2 max, Vector2[] chosenPositions)
@@ -47,7 +52,7 @@ public class SpawnTrees : MonoBehaviour
             foreach (var position in chosenPositions)
             {
                 float distance = Vector2.Distance(position, pos);
-                if (distance < minDistance)
+                if (distance < minDistanceBetweenTrees)
                 {
                     print("badPos");
                     goodPos = false;
@@ -69,6 +74,14 @@ public class SpawnTrees : MonoBehaviour
         spawnedTrees.Clear();
     }
 
+    [ContextMenu("CheckGraph")]
+    public void CheckGraph()
+    {
+        bool found = TestPathThroughTrees(generatedPositions.ToList());
+        print(found);
+    }
+
+
     private bool TestSmallestDistance(Vector2[] chosenPositions)
     {
         if (chosenPositions.Length == 1) return true;
@@ -86,7 +99,7 @@ public class SpawnTrees : MonoBehaviour
                 float dist = Vector2.Distance(pos1, pos2);
                 if (dist < closest) closest = dist;
             }
-            if (closest > maxDistance)
+            if (closest > maxDistanceBetweenTrees)
             {
                 return true;
             }
@@ -97,4 +110,96 @@ public class SpawnTrees : MonoBehaviour
 
     
 
+    List<GraphNode> BuildGraph(List<Vector2> allPositions)
+    {
+        var nodes = allPositions.Select(p => new GraphNode(p)).ToList();
+
+        int n = nodes.Count;
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = i + 1; j < n; j++)
+            {
+                float dist = Vector2.Distance(nodes[i].Position, nodes[j].Position);
+                if (dist <= maxDistanceBetweenTrees)
+                {
+                    nodes[i].Neighbors.Add(nodes[j]);
+                    nodes[j].Neighbors.Add(nodes[i]);
+                }
+            }
+        }
+
+        return nodes;
+    }
+
+    bool PathExists(GraphNode start, GraphNode goal)
+    {
+        var visited = new HashSet<GraphNode>();
+        var queue = new Queue<GraphNode>();
+
+        visited.Add(start);
+        queue.Enqueue(start);
+
+        while (queue.Count > 0)
+        {
+            var node = queue.Dequeue();
+            if (node == goal)
+                return true;
+
+            foreach (var neighbor in node.Neighbors)
+            {
+                if (visited.Add(neighbor))
+                    queue.Enqueue(neighbor);
+            }
+        }
+
+        return false;
+    }
+
+    private bool TestPathThroughTrees(List<Vector2> treePositions)
+    {
+        // assume aditionalPositionsToCheckConnection has exactly two entries: start & end
+        var allPositions = new List<Vector2>(treePositions);
+        allPositions.AddRange(aditionalPositionsToCheckConnection);
+
+        // 2. Build graph
+        float threshold = maxDistanceBetweenTrees;
+        graph = BuildGraph(allPositions);
+
+        // 3. Locate start/end nodes
+        GraphNode startNode = graph.Single(n => n.Position == aditionalPositionsToCheckConnection[0]);
+        GraphNode endNode = graph.Single(n => n.Position == aditionalPositionsToCheckConnection[1]);
+
+        // 4. Run BFS
+        bool connected = PathExists(startNode, endNode);
+        Debug.Log($"Path from {startNode.Position} to {endNode.Position}? {connected}");
+        return connected;
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.green;
+        foreach (var item in graph)
+        {
+            foreach (var item2 in item.Neighbors)
+            {
+                Vector3 pos1 = new Vector3(item.Position.x, 0, item.Position.y);
+                Vector3 pos2 = new Vector3(item2.Position.x, 0, item2.Position.y);
+                Gizmos.DrawLine(pos1, pos2);
+            }
+                
+        }
+    }
+}
+
+//graph stuff
+[SerializeField]
+public class GraphNode
+{
+    public Vector2 Position;
+    [SerializeField] public List<GraphNode> Neighbors = new List<GraphNode>();
+
+    public GraphNode(Vector2 pos)
+    {
+        Position = pos;
+    }
 }
