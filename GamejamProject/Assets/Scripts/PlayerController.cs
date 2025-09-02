@@ -3,6 +3,9 @@ using UnityEngine.Rendering.Universal;
 
 public class PlayerController : MonoBehaviour
 {
+    public static PlayerController Instance;
+    [HideInInspector] public TreeStages onTree;
+
     private new Rigidbody rigidbody;
     public float walkSpeed = 1;
     public float jumpForce = 1;
@@ -10,6 +13,7 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         rigidbody = GetComponent<Rigidbody>();
+        Instance = this;
     }
 
     void Update()
@@ -31,5 +35,32 @@ public class PlayerController : MonoBehaviour
             if (collisionLeft || collisionRight)
             rigidbody.AddForce(Vector3.up * jumpForce);
         }
+    }
+
+    /// <summary>
+    /// Set tree value after landing on one
+    /// </summary>
+    private void OnCollisionEnter(Collision collision)
+    {
+        GameObject obj = collision.gameObject;
+        while(obj.transform.parent != null)
+        {
+            if (obj.TryGetComponent(out TreeStages tree)) 
+            {
+                onTree = tree;
+                break;
+            }
+            obj = obj.transform.parent.gameObject;
+        }
+        //Debug.Log($"new collision tree = {onTree.gameObject}");
+    }
+
+    /// <summary>
+    /// Remove tree from value after leaving tree
+    /// </summary>
+    private void OnCollisionExit(Collision collision)
+    {
+        onTree = null;
+        print("bye bye platform");
     }
 }
