@@ -64,13 +64,16 @@ public class TreeStages : MonoBehaviour
         // Dont raise if object has no collision
         if (!ComponentTools.AnyChildHasComponent<Collider>(this.transform)) yield break;
 
-        print("raised player");
-        // Get tallest point of tree
+        //print("raised player");
+        // Get tallest point of tree collider
         float highest = float.MinValue;
         for(int i = 0; i < this.transform.GetChild(0).childCount; i++)
         {
-            float point = this.transform.GetChild(0).GetChild(i).GetComponent<Collider>().ClosestPoint(new(0, 1000, 0)).y;
-            if (point > highest) highest = point;
+            if (this.transform.GetChild(0).GetChild(i).TryGetComponent(out Collider collider))
+            {
+                float point = collider.ClosestPoint(new(0, 1000, 0)).y;
+                if (point > highest) highest = point;
+            }
         }
         // Set player pos
         Vector3 playerPos = PlayerController.Instance.transform.position;

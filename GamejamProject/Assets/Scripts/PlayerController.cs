@@ -61,6 +61,6 @@ public class PlayerController : MonoBehaviour
     private void OnCollisionExit(Collision collision)
     {
         onTree = null;
-        print("bye bye platform");
+        //print("bye bye platform");
     }
 }
