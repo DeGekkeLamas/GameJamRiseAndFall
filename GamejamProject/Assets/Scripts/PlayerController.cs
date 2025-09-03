@@ -1,5 +1,6 @@
+using System.Security.Cryptography.X509Certificates;
+using UnityEditor.Animations;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 
 public class PlayerController : MonoBehaviour
 {
@@ -8,8 +9,11 @@ public class PlayerController : MonoBehaviour
 
     new Rigidbody rigidbody;
     new CameraController camera;
+    public Transform model;
     public float walkSpeed = 1;
     public float jumpForce = 1;
+
+    public Animator animator;
 
     private void Awake()
     {
@@ -21,10 +25,11 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         // Walking
-        transform.Translate(walkSpeed * Time.deltaTime * new Vector3(
-            Input.GetAxis("Horizontal"), 
+        Vector3 movementDir = new(
+            Input.GetAxis("Horizontal"),
             0,
-            Input.GetAxis("Vertical")), camera.rotationYReference.transform);
+            Input.GetAxis("Vertical"));
+        transform.Translate(walkSpeed * Time.deltaTime * movementDir, camera.rotationYReference.transform);
 
         // Jumping
         if (Input.GetKeyDown(KeyCode.Space))
@@ -39,6 +44,24 @@ public class PlayerController : MonoBehaviour
             /// Add velocity
             if (collisionLeft || collisionRight)
             rigidbody.AddForce(Vector3.up * jumpForce);
+        }
+
+        // Model animation
+        if (Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0)
+        {
+            if (!animator.GetCurrentAnimatorStateInfo(0).IsName("Run"))
+                animator.Play("Run");
+
+            //model.rotation = Quaternion.LookRotation(movementDir);
+        }
+        else
+        {
+            if (!animator.GetCurrentAnimatorStateInfo(0).IsName("Idle") &&
+                animator.GetCurrentAnimatorStateInfo(0).length * .9f <
+             animator.GetCurrentAnimatorStateInfo(0).normalizedTime)
+            {
+                animator.Play("Idle");
+            }
         }
     }
 
