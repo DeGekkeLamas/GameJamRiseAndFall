@@ -1,10 +1,12 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class SpawnTrees : MonoBehaviour
 {
+
     public List<GameObject> prefabsOfTrees;
     public List<GameObject> spawnedTrees = new();
     public List<Vector2> aditionalPositionsToCheckConnection;
@@ -16,7 +18,8 @@ public class SpawnTrees : MonoBehaviour
     public Transform treeContainer;
     public Vector2 spawnableAreaMin;
     public Vector2 spawnableAreaMax;
-    
+    [SerializeField] public List<FloatListWrapper> jumpDistanceSettings = new List<FloatListWrapper>();
+
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -114,21 +117,39 @@ public class SpawnTrees : MonoBehaviour
     {
         var nodes = allPositions.Select(p => new GraphNode(p)).ToList();
 
+        foreach (var item in nodes)
+        {
+            item.startingGrowthStage = Random.Range(0, 4);
+        }
+
         int n = nodes.Count;
         for (int i = 0; i < n; i++)
         {
             for (int j = i + 1; j < n; j++)
             {
-                float dist = Vector2.Distance(nodes[i].Position, nodes[j].Position);
-                if (dist <= maxDistanceBetweenTrees)
+                if (TestValidPath(nodes[i], nodes[j]))
                 {
                     nodes[i].Neighbors.Add(nodes[j]);
+                }
+                if (TestValidPath(nodes[j], nodes[i]))
+                {
                     nodes[j].Neighbors.Add(nodes[i]);
                 }
             }
         }
 
         return nodes;
+    }
+
+    bool TestValidPath(GraphNode from, GraphNode to)
+    {
+        float dist = Vector2.Distance(from.Position, to.Position);
+        for (int i = 0; i < 5 - from.startingGrowthStage; i++)
+        {
+            float distanceSettings = jumpDistanceSettings[from.startingGrowthStage].values[to.startingGrowthStage];
+            if (dist < distanceSettings) return true;
+        }
+        return false;
     }
 
     bool PathExists(GraphNode start, GraphNode goal)
@@ -196,10 +217,19 @@ public class SpawnTrees : MonoBehaviour
 public class GraphNode
 {
     public Vector2 Position;
+    public int startingGrowthStage;
     [SerializeField] public List<GraphNode> Neighbors = new List<GraphNode>();
 
     public GraphNode(Vector2 pos)
     {
+        
         Position = pos;
     }
+}
+
+//listWrapper
+[System.Serializable] public class FloatListWrapper
+{
+    public string growthStageName;
+    public List<float> values = new List<float>();
 }
