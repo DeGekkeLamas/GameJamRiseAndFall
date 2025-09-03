@@ -41,14 +41,9 @@ public class SpawnTrees : MonoBehaviour
         graph.Clear();
 
         // 2) Seed graph with the two fixed connection nodes
-        startNode = new GraphNode(aditionalPositionsToCheckConnection[0])
-        {
-            startingGrowthStage = 1 // or pick a stage if you like
-        };
-        endNode = new GraphNode(aditionalPositionsToCheckConnection[1])
-        {
-            startingGrowthStage = 1
-        };
+        startNode = new GraphNode(aditionalPositionsToCheckConnection[0], 0);
+        endNode = new GraphNode(aditionalPositionsToCheckConnection[1], 0);
+        
         graph.Add(startNode);
         graph.Add(endNode);
 
@@ -66,13 +61,11 @@ public class SpawnTrees : MonoBehaviour
             // b) Record position & tree type for later instantiation
             generatedPositions.Add(pos);
             int randomTreeType = Random.Range(0, prefabsOfTrees.Count);
-            generatedTreeTypes.Add(randomTreeType);
+            
 
             // c) Create a new graph node, assign growth stage
-            var newNode = new GraphNode(pos)
-            {
-                startingGrowthStage = Random.Range(0, 5)
-            };
+            var newNode = new GraphNode(pos, randomTreeType);
+            graph.Add(newNode);
 
             // d) Link newNode to all existing graph nodes if TestValidPath passes
             foreach (var existing in graph)
@@ -82,7 +75,7 @@ public class SpawnTrees : MonoBehaviour
             }
 
             // e) Add newNode to the graph
-            graph.Add(newNode);
+            
 
             // f) Check your two stop conditions:
             //    1) No pair exceeding maxDistanceBetweenTrees
@@ -94,10 +87,10 @@ public class SpawnTrees : MonoBehaviour
         } while (needsMore);
 
         // 4) Finally instantiate all trees at once
-        for (int i = 0; i < generatedPositions.Count; i++)
+        for (int i = 0; i < graph.Count; i++)
         {
-            Vector2 p = generatedPositions[i];
-            int prefabIdx = generatedTreeTypes[i];
+            Vector2 p = graph[i].Position;
+            int prefabIdx = graph[i].startingGrowthStage;
             Vector3 worldP = new Vector3(p.x, 0, p.y);
 
             var tree = Instantiate(
@@ -247,8 +240,9 @@ public class GraphNode
     
     public List<GraphNode> Neighbors = new List<GraphNode>();
 
-    public GraphNode(Vector2 pos)
+    public GraphNode(Vector2 pos, int startGrowthStage)
     {
+        startingGrowthStage = startGrowthStage;
         Position = pos;
     }
 }
