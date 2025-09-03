@@ -2,6 +2,7 @@ using UnityEngine;
 using NaughtyAttributes;
 using UnityEngine.InputSystem;
 using System.Collections;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -87,5 +88,7 @@ public class GameManager : MonoBehaviour
     public void GameOver()
     {
         print("You died lmao");
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        TreeStages.allTrees.Clear();
     }
 }
