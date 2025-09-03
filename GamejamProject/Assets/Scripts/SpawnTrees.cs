@@ -9,7 +9,6 @@ public class SpawnTrees : MonoBehaviour
     [Header("Tree Prefabs & Settings")]
     public GameObject scriptedTreeprefab;
     public int minDistanceBetweenTrees;
-    public int maxDistanceBetweenTrees;
     public Transform treeContainer;
 
     [Header("Spawn Area")]
@@ -24,7 +23,7 @@ public class SpawnTrees : MonoBehaviour
     [SerializeField] private List<GraphNode> graph = new List<GraphNode>();
     private List<Vector2> generatedPositions = new List<Vector2>();
     private List<int> generatedTreeTypes = new List<int>();
-    public List<GameObject> spawnedTrees = new List<GameObject>();
+    private List<GameObject> spawnedTrees = new List<GameObject>();
 
     [Header("Jump Distance Settings")]
     public List<FloatListWrapper> jumpDistanceSettings = new List<FloatListWrapper>();
@@ -41,6 +40,7 @@ public class SpawnTrees : MonoBehaviour
     [ContextMenu("GenerateTrees")]
     public void GenerateTrees()
     {
+        float startTime = Time.realtimeSinceStartup;
         // 1) Clear any existing trees & data
         ClearTrees();
         generatedPositions.Clear();
@@ -90,6 +90,14 @@ public class SpawnTrees : MonoBehaviour
             //bool tooSparse = TestSmallestDistance(generatedPositions.ToArray());
             bool noPathYet = !PathExists(startNode, endNode);
             needsMore = noPathYet;
+            if ((int)(startTime - Time.realtimeSinceStartup) < -10)
+            {
+                print(startTime);
+                print(Time.realtimeSinceStartup);
+                print((int)(startTime - Time.realtimeSinceStartup));
+                Debug.LogWarning("too much time has passed. abborting algorithm");
+                break;
+            }
 
         } while (needsMore);
 
@@ -160,29 +168,6 @@ public class SpawnTrees : MonoBehaviour
             DestroyImmediate(t);
         spawnedTrees.Clear();
     }
-
-
-    private bool TestSmallestDistance(Vector2[] chosenPositions)
-    {
-        if (chosenPositions.Length <= 1)
-            return true;
-
-        var all = chosenPositions.Concat(aditionalPositionsToCheckConnection).ToArray();
-        foreach (var a in all)
-        {
-            float closest = float.MaxValue;
-            foreach (var b in chosenPositions)
-            {
-                if (a == b) continue;
-                closest = Mathf.Min(closest, Vector2.Distance(a, b));
-            }
-
-            if (closest > maxDistanceBetweenTrees)
-                return true;
-        }
-        return false;
-    }
-
 
     private bool TestValidPath(GraphNode from, GraphNode to)//change to take plant growth in mind
     {
