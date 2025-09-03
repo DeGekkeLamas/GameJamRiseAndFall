@@ -7,6 +7,12 @@ public class GameManager : MonoBehaviour
 {
     public RectTransform fadeEff;
     public float fadeSpeed = 20;
+
+    public static GameManager instance;
+    private void Awake()
+    {
+        instance = this;
+    }
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Q)) StartCoroutine(BackwardTimeAnimation());
@@ -15,6 +21,7 @@ public class GameManager : MonoBehaviour
 
     IEnumerator ForwardTimeAnimation()
     {
+        print("Forwarded time");
         for (int i = 0; i < 1600/fadeSpeed; i++)
         {
             fadeEff.anchoredPosition = new Vector2(0f, (500 - -100 - i * fadeSpeed) / 2) * fadeEff.parent.localScale.x;
@@ -46,6 +53,7 @@ public class GameManager : MonoBehaviour
     }
     IEnumerator BackwardTimeAnimation()
     {
+        print("Reversed time");
         for (int i = 0; i < 1600 / fadeSpeed; i++)
         {
             fadeEff.anchoredPosition = new Vector2(0f, (500 - -100 - i * fadeSpeed) / 2) * fadeEff.parent.localScale.x;
@@ -74,5 +82,10 @@ public class GameManager : MonoBehaviour
         {
             tree.BackwardTime();
         }
+    }
+
+    public void GameOver()
+    {
+        print("You died lmao");
     }
 }
