@@ -1,3 +1,4 @@
+using NaughtyAttributes;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -12,10 +13,13 @@ public class TreeStages : MonoBehaviour
     void Awake()
     {
         allTrees.Add(this);
-        currentTree = this.transform.GetChild(0).gameObject;
+        // Set child as current tree object
+        if(this.transform.childCount > 0)
+            currentTree = this.transform.GetChild(0).gameObject;
     }
 
-    private void OnValidate()
+    [Button]
+    void UpdateTreeModel()
     {
         if (treeStages.Length < 1) return;
 
@@ -26,6 +30,7 @@ public class TreeStages : MonoBehaviour
             this.transform.position, Quaternion.identity, this.transform);
     }
 
+    [Button]
     public void ForwardTime()
     {
         currentState++;
@@ -37,6 +42,7 @@ public class TreeStages : MonoBehaviour
         if (PlayerController.Instance.onTree == this) StartCoroutine(RaisePlayerWithTree());
     }
 
+    [Button]
     public void BackwardTime()
     {
         currentState--;
@@ -77,7 +83,7 @@ public class TreeStages : MonoBehaviour
         #if UNITY_EDITOR
         if(!UnityEditor.EditorApplication.isPlaying)
         {
-            UnityEditor.EditorApplication.delayCall += () => DestroyImmediate(currentTree);
+            DestroyImmediate(currentTree);
         }
         else
         {
