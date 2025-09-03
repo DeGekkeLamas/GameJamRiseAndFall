@@ -19,7 +19,7 @@ public class TreeStages : MonoBehaviour
     }
 
     [Button]
-    void UpdateTreeModel()
+    public void UpdateTreeModel()
     {
         if (treeStages.Length < 1) return;
 
