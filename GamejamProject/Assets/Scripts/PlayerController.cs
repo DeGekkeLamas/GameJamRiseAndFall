@@ -40,7 +40,7 @@ public class PlayerController : MonoBehaviour
     /// <summary>
     /// Set tree value after landing on one
     /// </summary>
-    private void OnCollisionEnter(Collision collision)
+    private void OnCollisionStay(Collision collision)
     {
         GameObject obj = collision.gameObject;
         while(obj.transform.parent != null)

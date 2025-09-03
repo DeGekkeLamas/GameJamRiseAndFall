@@ -61,7 +61,8 @@ public class TreeStages : MonoBehaviour
     IEnumerator RaisePlayerWithTree()
     {
         yield return null;
-        if (!transform.GetChild(0).TryGetComponent<Collider>(out _)) yield break;
+        // Dont raise if object has no collision
+        if (!ComponentTools.AnyChildHasComponent<Collider>(this.transform)) yield break;
 
         print("raised player");
         // Get tallest point of tree
@@ -73,8 +74,12 @@ public class TreeStages : MonoBehaviour
         }
         // Set player pos
         Vector3 playerPos = PlayerController.Instance.transform.position;
-        PlayerController.Instance.transform.position = new(playerPos.x, 
+        Vector3 newPos = new(playerPos.x,
             highest + PlayerController.Instance.transform.lossyScale.y * .5f, playerPos.z);
+        PlayerController.Instance.transform.position = newPos;
+        //print(newPos);
+
+        //yield return null;
         PlayerController.Instance.onTree = this;
     }
 
