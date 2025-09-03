@@ -71,15 +71,14 @@ public class SpawnTrees : MonoBehaviour
             // c) Create a new graph node, assign growth stage
             var newNode = new GraphNode(pos)
             {
-                startingGrowthStage = Random.Range(0, 4)
+                startingGrowthStage = Random.Range(0, 5)
             };
 
             // d) Link newNode to all existing graph nodes if TestValidPath passes
             foreach (var existing in graph)
             {
-                if (TestValidPath(existing, newNode)) { existing.Neighbors.Add(newNode); newNode.Neighbors.Add(existing); }
-                if (TestValidPath(newNode, existing)) { newNode.Neighbors.Add(existing); existing.Neighbors.Add(newNode);}
-
+                if (TestValidPath(existing, newNode))  existing.Neighbors.Add(newNode); 
+                if (TestValidPath(newNode, existing))  newNode.Neighbors.Add(existing); 
             }
 
             // e) Add newNode to the graph
@@ -152,6 +151,7 @@ public class SpawnTrees : MonoBehaviour
     [ContextMenu("ClearTrees")]
     public void ClearTrees()
     {
+        graph.Clear();
         foreach (var t in spawnedTrees)
             DestroyImmediate(t);
         spawnedTrees.Clear();
@@ -180,14 +180,18 @@ public class SpawnTrees : MonoBehaviour
     }
 
 
-    private bool TestValidPath(GraphNode from, GraphNode to)
+    private bool TestValidPath(GraphNode from, GraphNode to)//change to take plant growth in mind
     {
         float dist = Vector2.Distance(from.Position, to.Position);
-        // example: you allow up to N jumps depending on growth stage
-        for (int i = 0; i < 5 - from.startingGrowthStage; i++)
+        int max = Mathf.Max(from.startingGrowthStage, to.startingGrowthStage);
+        int min = Mathf.Min(from.startingGrowthStage, to.startingGrowthStage);
+        int goingBack = 0 - min;
+        int goingForward = 6-max;
+
+        for (int i = goingBack; i < goingForward; i++)
         {
-            float jumpLimit = jumpDistanceSettings[from.startingGrowthStage]
-                                      .values[to.startingGrowthStage];
+            float jumpLimit = jumpDistanceSettings[from.startingGrowthStage + i].values[to.startingGrowthStage + i];
+
             if (dist < jumpLimit)
                 return true;
         }
