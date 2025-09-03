@@ -40,6 +40,7 @@ public class SpawnTrees : MonoBehaviour
     [ContextMenu("GenerateTrees")]
     public void GenerateTrees()
     {
+        float startTime = Time.realtimeSinceStartup;
         // 1) Clear any existing trees & data
         ClearTrees();
         generatedPositions.Clear();
@@ -89,6 +90,14 @@ public class SpawnTrees : MonoBehaviour
             //bool tooSparse = TestSmallestDistance(generatedPositions.ToArray());
             bool noPathYet = !PathExists(startNode, endNode);
             needsMore = noPathYet;
+            if ((int)(startTime - Time.realtimeSinceStartup) < -10)
+            {
+                print(startTime);
+                print(Time.realtimeSinceStartup);
+                print((int)(startTime - Time.realtimeSinceStartup));
+                Debug.LogWarning("too much time has passed. abborting algorithm");
+                break;
+            }
 
         } while (needsMore);
 
