@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class SpawnTrees : MonoBehaviour
 {
     [Header("Tree Prefabs & Settings")]
-    public List<GameObject> prefabsOfTrees;
+    public GameObject scriptedTreeprefab;
     public int minDistanceBetweenTrees;
     public int maxDistanceBetweenTrees;
     public Transform treeContainer;
@@ -23,13 +24,19 @@ public class SpawnTrees : MonoBehaviour
     [SerializeField] private List<GraphNode> graph = new List<GraphNode>();
     private List<Vector2> generatedPositions = new List<Vector2>();
     private List<int> generatedTreeTypes = new List<int>();
-    private List<GameObject> spawnedTrees = new List<GameObject>();
+    public List<GameObject> spawnedTrees = new List<GameObject>();
 
     [Header("Jump Distance Settings")]
     public List<FloatListWrapper> jumpDistanceSettings = new List<FloatListWrapper>();
 
     GraphNode startNode;
     GraphNode endNode;
+
+    private void Start()
+    {
+        GenerateTrees();
+    }
+
 
     [ContextMenu("GenerateTrees")]
     public void GenerateTrees()
@@ -60,7 +67,7 @@ public class SpawnTrees : MonoBehaviour
 
             // b) Record position & tree type for later instantiation
             generatedPositions.Add(pos);
-            int randomTreeType = Random.Range(0, prefabsOfTrees.Count);
+            int randomTreeType = Random.Range(0, scriptedTreeprefab.GetComponent<TreeStages>().treeStages.Length);
             
 
             // c) Create a new graph node, assign growth stage
@@ -80,9 +87,9 @@ public class SpawnTrees : MonoBehaviour
             // f) Check your two stop conditions:
             //    1) No pair exceeding maxDistanceBetweenTrees
             //    2) A valid BFS path from startNode to endNode
-            bool tooSparse = TestSmallestDistance(generatedPositions.ToArray());
+            //bool tooSparse = TestSmallestDistance(generatedPositions.ToArray());
             bool noPathYet = !PathExists(startNode, endNode);
-            needsMore = tooSparse || noPathYet;
+            needsMore = noPathYet;
 
         } while (needsMore);
 
@@ -94,12 +101,16 @@ public class SpawnTrees : MonoBehaviour
             Vector3 worldP = new Vector3(p.x, 0, p.y);
 
             var tree = Instantiate(
-                prefabsOfTrees[prefabIdx],
+                scriptedTreeprefab,
                 worldP,
                 Quaternion.identity,
                 treeContainer
             );
             spawnedTrees.Add(tree);
+            TreeStages treeScript = tree.GetComponent<TreeStages>();
+            treeScript.currentState = prefabIdx;
+            treeScript.UpdateTreeModel();
+
         }
     }
 
