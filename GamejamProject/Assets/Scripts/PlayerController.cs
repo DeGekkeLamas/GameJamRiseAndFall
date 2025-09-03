@@ -6,7 +6,8 @@ public class PlayerController : MonoBehaviour
     public static PlayerController Instance;
     [HideInInspector] public TreeStages onTree;
 
-    private new Rigidbody rigidbody;
+    new Rigidbody rigidbody;
+    new CameraController camera;
     public float walkSpeed = 1;
     public float jumpForce = 1;
 
@@ -14,12 +15,16 @@ public class PlayerController : MonoBehaviour
     {
         rigidbody = GetComponent<Rigidbody>();
         Instance = this;
+        camera = Camera.main.transform.parent.GetComponent<CameraController>();
     }
 
     void Update()
     {
         // Walking
-        transform.position += walkSpeed * Time.deltaTime * new Vector3(Input.GetAxis("Horizontal"), 0, 0);
+        transform.Translate(walkSpeed * Time.deltaTime * new Vector3(
+            Input.GetAxis("Horizontal"), 
+            0,
+            Input.GetAxis("Vertical")), camera.rotationYReference.transform);
 
         // Jumping
         if (Input.GetKeyDown(KeyCode.Space))
