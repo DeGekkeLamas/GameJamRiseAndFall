@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor.Experimental.GraphView;
@@ -6,158 +5,200 @@ using UnityEngine;
 
 public class SpawnTrees : MonoBehaviour
 {
-
+    [Header("Tree Prefabs & Settings")]
     public List<GameObject> prefabsOfTrees;
-    public List<GameObject> spawnedTrees = new();
-    public List<Vector2> aditionalPositionsToCheckConnection;
-    public List<Vector2> generatedPositions = new();
-    [SerializeField] public List<GraphNode> graph = new List<GraphNode>();
-    public int treeCount;
     public int minDistanceBetweenTrees;
     public int maxDistanceBetweenTrees;
     public Transform treeContainer;
+
+    [Header("Spawn Area")]
     public Vector2 spawnableAreaMin;
     public Vector2 spawnableAreaMax;
-    [SerializeField] public List<FloatListWrapper> jumpDistanceSettings = new List<FloatListWrapper>();
 
+    [Header("Connection Points")]
+    [Tooltip("Exactly two positions: start and end")]
+    public List<Vector2> aditionalPositionsToCheckConnection;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        GenerateTrees();
-    }
+    [Header("Graph & Generation Data")]
+    [SerializeField] private List<GraphNode> graph = new List<GraphNode>();
+    private List<Vector2> generatedPositions = new List<Vector2>();
+    private List<int> generatedTreeTypes = new List<int>();
+    private List<GameObject> spawnedTrees = new List<GameObject>();
+
+    [Header("Jump Distance Settings")]
+    public List<FloatListWrapper> jumpDistanceSettings = new List<FloatListWrapper>();
+
+    GraphNode startNode;
+    GraphNode endNode;
 
     [ContextMenu("GenerateTrees")]
     public void GenerateTrees()
     {
-        //bool generationDone = false;
+        // 1) Clear any existing trees & data
         ClearTrees();
         generatedPositions.Clear();
-        do {
-            Vector2 pos = PickRandomPosInArea(spawnableAreaMin, spawnableAreaMax, generatedPositions.ToArray());
-            generatedPositions.Add(pos);
-            int randomTreeType = Random.Range(0, prefabsOfTrees.Count);
-            Vector3 position = new Vector3(pos.x, 0, pos.y);
-            spawnedTrees.Add(Instantiate(prefabsOfTrees[randomTreeType], position, Quaternion.identity, treeContainer));
-            
+        generatedTreeTypes.Clear();
+        graph.Clear();
 
-        } while (TestSmallestDistance(generatedPositions.ToArray()) || !TestPathThroughTrees(generatedPositions.ToList()));
-    }
+        // 2) Seed graph with the two fixed connection nodes
+        startNode = new GraphNode(aditionalPositionsToCheckConnection[0])
+        {
+            startingGrowthStage = 1 // or pick a stage if you like
+        };
+        endNode = new GraphNode(aditionalPositionsToCheckConnection[1])
+        {
+            startingGrowthStage = 1
+        };
+        graph.Add(startNode);
+        graph.Add(endNode);
 
-    private Vector2 PickRandomPosInArea(Vector2 min, Vector2 max, Vector2[] chosenPositions)
-    {
-        bool goodPos = false;
-        Vector2 pos = Vector2.zero;
+        // 3) Incrementally add random trees until constraints pass
+        bool needsMore;
         do
         {
-            goodPos = true;
-            pos = new Vector2(Random.Range(min.x, max.x), Random.Range(min.y, max.y));
-            foreach (var position in chosenPositions)
+            // a) Pick a valid new position
+            Vector2 pos = PickRandomPosInArea(
+                spawnableAreaMin,
+                spawnableAreaMax,
+                generatedPositions.ToArray()
+            );
+
+            // b) Record position & tree type for later instantiation
+            generatedPositions.Add(pos);
+            int randomTreeType = Random.Range(0, prefabsOfTrees.Count);
+            generatedTreeTypes.Add(randomTreeType);
+
+            // c) Create a new graph node, assign growth stage
+            var newNode = new GraphNode(pos)
             {
-                float distance = Vector2.Distance(position, pos);
-                if (distance < minDistanceBetweenTrees)
-                {
-                    print("badPos");
-                    goodPos = false;
-                    break;
-                }
+                startingGrowthStage = Random.Range(0, 4)
+            };
+
+            // d) Link newNode to all existing graph nodes if TestValidPath passes
+            foreach (var existing in graph)
+            {
+                if (TestValidPath(existing, newNode)) { existing.Neighbors.Add(newNode); newNode.Neighbors.Add(existing); }
+                if (TestValidPath(newNode, existing)) { newNode.Neighbors.Add(existing); existing.Neighbors.Add(newNode);}
 
             }
-        } while (!goodPos);
-        return new Vector2(pos.x, pos.y);
+
+            // e) Add newNode to the graph
+            graph.Add(newNode);
+
+            // f) Check your two stop conditions:
+            //    1) No pair exceeding maxDistanceBetweenTrees
+            //    2) A valid BFS path from startNode to endNode
+            bool tooSparse = TestSmallestDistance(generatedPositions.ToArray());
+            bool noPathYet = !PathExists(startNode, endNode);
+            needsMore = tooSparse || noPathYet;
+
+        } while (needsMore);
+
+        // 4) Finally instantiate all trees at once
+        for (int i = 0; i < generatedPositions.Count; i++)
+        {
+            Vector2 p = generatedPositions[i];
+            int prefabIdx = generatedTreeTypes[i];
+            Vector3 worldP = new Vector3(p.x, 0, p.y);
+
+            var tree = Instantiate(
+                prefabsOfTrees[prefabIdx],
+                worldP,
+                Quaternion.identity,
+                treeContainer
+            );
+            spawnedTrees.Add(tree);
+        }
     }
+
+
+    private Vector2 PickRandomPosInArea(
+        Vector2 min,
+        Vector2 max,
+        Vector2[] chosenPositions
+    )
+    {
+        while (true)
+        {
+            Vector2 pos = new Vector2(
+                Random.Range(min.x, max.x),
+                Random.Range(min.y, max.y)
+            );
+
+            // enforce minDistanceBetweenTrees
+            bool ok = true;
+            foreach (var other in chosenPositions)
+            {
+                if (Vector2.Distance(other, pos) < minDistanceBetweenTrees)
+                {
+                    ok = false;
+                    break;
+                }
+            }
+
+            if (ok)
+                return pos;
+        }
+    }
+
+    [ContextMenu("TestPath")]
+    public void TestPath()
+    {
+        print(PathExists(startNode, endNode));
+
+    }
+
 
     [ContextMenu("ClearTrees")]
     public void ClearTrees()
     {
-        foreach (var tree in spawnedTrees)
-        {
-            DestroyImmediate(tree);
-        }
+        foreach (var t in spawnedTrees)
+            DestroyImmediate(t);
         spawnedTrees.Clear();
-    }
-
-    [ContextMenu("CheckGraph")]
-    public void CheckGraph()
-    {
-        bool found = TestPathThroughTrees(generatedPositions.ToList());
-        print(found);
     }
 
 
     private bool TestSmallestDistance(Vector2[] chosenPositions)
     {
-        if (chosenPositions.Length == 1) return true;
+        if (chosenPositions.Length <= 1)
+            return true;
 
-        Vector2[] allPositionsToTest = chosenPositions.Concat(aditionalPositionsToCheckConnection).ToArray();
-        foreach (var pos1 in allPositionsToTest)
+        var all = chosenPositions.Concat(aditionalPositionsToCheckConnection).ToArray();
+        foreach (var a in all)
         {
             float closest = float.MaxValue;
-            foreach (var pos2 in chosenPositions)
+            foreach (var b in chosenPositions)
             {
-                if (pos1 == pos2)
-                {
-                    continue;
-                }
-                float dist = Vector2.Distance(pos1, pos2);
-                if (dist < closest) closest = dist;
+                if (a == b) continue;
+                closest = Mathf.Min(closest, Vector2.Distance(a, b));
             }
-            if (closest > maxDistanceBetweenTrees)
-            {
-                return true;
-            }
-        }
 
+            if (closest > maxDistanceBetweenTrees)
+                return true;
+        }
         return false;
     }
 
-    
 
-    List<GraphNode> BuildGraph(List<Vector2> allPositions)
-    {
-        var nodes = allPositions.Select(p => new GraphNode(p)).ToList();
-
-        foreach (var item in nodes)
-        {
-            item.startingGrowthStage = Random.Range(0, 4);
-        }
-
-        int n = nodes.Count;
-        for (int i = 0; i < n; i++)
-        {
-            for (int j = i + 1; j < n; j++)
-            {
-                if (TestValidPath(nodes[i], nodes[j]))
-                {
-                    nodes[i].Neighbors.Add(nodes[j]);
-                }
-                if (TestValidPath(nodes[j], nodes[i]))
-                {
-                    nodes[j].Neighbors.Add(nodes[i]);
-                }
-            }
-        }
-
-        return nodes;
-    }
-
-    bool TestValidPath(GraphNode from, GraphNode to)
+    private bool TestValidPath(GraphNode from, GraphNode to)
     {
         float dist = Vector2.Distance(from.Position, to.Position);
+        // example: you allow up to N jumps depending on growth stage
         for (int i = 0; i < 5 - from.startingGrowthStage; i++)
         {
-            float distanceSettings = jumpDistanceSettings[from.startingGrowthStage].values[to.startingGrowthStage];
-            if (dist < distanceSettings) return true;
+            float jumpLimit = jumpDistanceSettings[from.startingGrowthStage]
+                                      .values[to.startingGrowthStage];
+            if (dist < jumpLimit)
+                return true;
         }
         return false;
     }
 
-    bool PathExists(GraphNode start, GraphNode goal)
-    {
-        var visited = new HashSet<GraphNode>();
-        var queue = new Queue<GraphNode>();
 
-        visited.Add(start);
+    private bool PathExists(GraphNode start, GraphNode goal)
+    {
+        var visited = new HashSet<GraphNode> { start };
+        var queue = new Queue<GraphNode>();
         queue.Enqueue(start);
 
         while (queue.Count > 0)
@@ -166,69 +207,52 @@ public class SpawnTrees : MonoBehaviour
             if (node == goal)
                 return true;
 
-            foreach (var neighbor in node.Neighbors)
+            foreach (var nei in node.Neighbors)
             {
-                if (visited.Add(neighbor))
-                    queue.Enqueue(neighbor);
+                if (visited.Add(nei))
+                    queue.Enqueue(nei);
             }
         }
-
         return false;
     }
 
-    private bool TestPathThroughTrees(List<Vector2> treePositions)
-    {
-        // assume aditionalPositionsToCheckConnection has exactly two entries: start & end
-        var allPositions = new List<Vector2>(treePositions);
-        allPositions.AddRange(aditionalPositionsToCheckConnection);
-
-        // 2. Build graph
-        float threshold = maxDistanceBetweenTrees;
-        graph = BuildGraph(allPositions);
-
-        // 3. Locate start/end nodes
-        GraphNode startNode = graph.Single(n => n.Position == aditionalPositionsToCheckConnection[0]);
-        GraphNode endNode = graph.Single(n => n.Position == aditionalPositionsToCheckConnection[1]);
-
-        // 4. Run BFS
-        bool connected = PathExists(startNode, endNode);
-        Debug.Log($"Path from {startNode.Position} to {endNode.Position}? {connected}");
-        return connected;
-    }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.green;
-        foreach (var item in graph)
+        foreach (var node in graph)
         {
-            foreach (var item2 in item.Neighbors)
+            Vector3 a = new Vector3(node.Position.x, 0, node.Position.y);
+            foreach (var nei in node.Neighbors)
             {
-                Vector3 pos1 = new Vector3(item.Position.x, 0, item.Position.y);
-                Vector3 pos2 = new Vector3(item2.Position.x, 0, item2.Position.y);
-                Gizmos.DrawLine(pos1, pos2);
+                Vector3 b = new Vector3(nei.Position.x, 0, nei.Position.y);
+                Gizmos.DrawLine(a, b);
             }
-                
         }
     }
 }
 
-//graph stuff
-[SerializeField]
+
+// Graph node definition remains the same
+
 public class GraphNode
 {
     public Vector2 Position;
     public int startingGrowthStage;
-    [SerializeField] public List<GraphNode> Neighbors = new List<GraphNode>();
+
+    
+    public List<GraphNode> Neighbors = new List<GraphNode>();
 
     public GraphNode(Vector2 pos)
     {
-        
         Position = pos;
     }
 }
 
-//listWrapper
-[System.Serializable] public class FloatListWrapper
+
+// Wrapper for your jump distance matrix
+[System.Serializable]
+public class FloatListWrapper
 {
     public string growthStageName;
     public List<float> values = new List<float>();
