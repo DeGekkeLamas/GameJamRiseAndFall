@@ -61,7 +61,8 @@ public class PlayerController : MonoBehaviour
                 if (!animator.GetCurrentAnimatorStateInfo(0).IsName("Run"))
                     animator.Play("Run");
 
-                //model.rotation = Quaternion.LookRotation(movementDir);
+                model.eulerAngles = new(0,
+                    Quaternion.LookRotation(camera.rotationYReference.transform.forward, movementDir).eulerAngles.y, 0);
             }
             else
             {
