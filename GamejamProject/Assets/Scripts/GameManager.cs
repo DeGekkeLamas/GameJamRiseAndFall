@@ -3,11 +3,13 @@ using NaughtyAttributes;
 using UnityEngine.InputSystem;
 using System.Collections;
 using UnityEngine.SceneManagement;
+using UnityEngine.Events;
 
 public class GameManager : MonoBehaviour
 {
     public RectTransform fadeEff;
     public float fadeSpeed = 20;
+    public UnityEvent onTimeChanged;
 
     public static GameManager instance;
     private void Awake()
@@ -22,6 +24,7 @@ public class GameManager : MonoBehaviour
 
     IEnumerator ForwardTimeAnimation()
     {
+        onTimeChanged.Invoke();
         print("Forwarded time");
         for (int i = 0; i < 1600/fadeSpeed; i++)
         {
@@ -54,6 +57,7 @@ public class GameManager : MonoBehaviour
     }
     IEnumerator BackwardTimeAnimation()
     {
+        onTimeChanged.Invoke();
         print("Reversed time");
         for (int i = 0; i < 1600 / fadeSpeed; i++)
         {
