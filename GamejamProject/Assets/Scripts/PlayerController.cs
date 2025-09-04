@@ -1,5 +1,3 @@
-using System.Security.Cryptography.X509Certificates;
-using UnityEditor.Animations;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
