@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.VisualScripting;
@@ -14,6 +15,7 @@ public class SpawnTrees : MonoBehaviour
     [Header("Spawn Area")]
     public Vector2 spawnableAreaMin;
     public Vector2 spawnableAreaMax;
+    public bool displayArea;
 
     [Header("Connection Points")]
     [Tooltip("Exactly two positions: start and end")]
@@ -40,6 +42,7 @@ public class SpawnTrees : MonoBehaviour
     [ContextMenu("GenerateTrees")]
     public void GenerateTrees()
     {
+        float startTime = Time.realtimeSinceStartup;
         // 1) Clear any existing trees & data
         ClearTrees();
         generatedPositions.Clear();
@@ -89,6 +92,14 @@ public class SpawnTrees : MonoBehaviour
             //bool tooSparse = TestSmallestDistance(generatedPositions.ToArray());
             bool noPathYet = !PathExists(startNode, endNode);
             needsMore = noPathYet;
+            if ((int)(startTime - Time.realtimeSinceStartup) < -10)
+            {
+                print(startTime);
+                print(Time.realtimeSinceStartup);
+                print((int)(startTime - Time.realtimeSinceStartup));
+                Debug.LogWarning("too much time has passed. abborting algorithm");
+                break;
+            }
 
         } while (needsMore);
 
@@ -212,6 +223,29 @@ public class SpawnTrees : MonoBehaviour
                 Vector3 b = new Vector3(nei.Position.x, 0, nei.Position.y);
                 Gizmos.DrawLine(a, b);
             }
+        }
+    }
+    private void OnValidate()
+    {
+        StopAllCoroutines();
+        StartCoroutine(ShowFillArea());
+        // Set pivot to tell which object is which area
+        this.transform.position = new RectInt(Vector2Int.RoundToInt(spawnableAreaMin), 
+            Vector2Int.RoundToInt(spawnableAreaMax - spawnableAreaMin)).center;
+    }
+    IEnumerator ShowFillArea()
+    {
+        while (displayArea)
+        {
+            AlgorithmsUtils.DebugRectInt(
+                new(Vector2Int.RoundToInt(spawnableAreaMin), Vector2Int.RoundToInt(spawnableAreaMax - spawnableAreaMin)), Color.red);
+
+            foreach(Vector2 point in aditionalPositionsToCheckConnection)
+            {
+                DebugExtension.DebugWireSphere(new(point.x, 0, point.y), Color.blue, 1);
+            }
+
+            yield return null;
         }
     }
 }
