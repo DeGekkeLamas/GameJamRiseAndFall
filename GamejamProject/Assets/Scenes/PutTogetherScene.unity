@@ -10840,7 +10840,7 @@ MonoBehaviour:
   treeContainer: {fileID: 0}
   spawnableAreaMin: {x: 94.4, y: -35.1}
   spawnableAreaMax: {x: 144.5, y: -5.6}
-  displayArea: 0
+  displayArea: 1
   aditionalPositionsToCheckConnection:
   - {x: 91.9, y: -16.8}
   - {x: 142.45, y: -36.24}
@@ -22135,7 +22135,7 @@ MonoBehaviour:
   treeContainer: {fileID: 0}
   spawnableAreaMin: {x: 56.41, y: -80.1}
   spawnableAreaMax: {x: 144.5, y: -46.29}
-  displayArea: 0
+  displayArea: 1
   aditionalPositionsToCheckConnection:
   - {x: 142.4, y: -44.1}
   - {x: 54.53, y: -73.36}
