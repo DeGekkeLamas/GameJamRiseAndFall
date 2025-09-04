@@ -230,8 +230,9 @@ public class SpawnTrees : MonoBehaviour
         StopAllCoroutines();
         StartCoroutine(ShowFillArea());
         // Set pivot to tell which object is which area
-        this.transform.position = new RectInt(Vector2Int.RoundToInt(spawnableAreaMin), 
+        Vector2 pos = new RectInt(Vector2Int.RoundToInt(spawnableAreaMin), 
             Vector2Int.RoundToInt(spawnableAreaMax - spawnableAreaMin)).center;
+        this.transform.position = new(pos.x, 0, pos.y);
     }
     IEnumerator ShowFillArea()
     {
