@@ -1,6 +1,8 @@
 # Rise and Fall
 
-[Itch.io page ->](https://degekkelamas.itch.io/riseandfall)
+[Itch.io page ->](https://degekkelamas.itch.io/riseandfall)\
+[Arthur's portfolio page ->](https://arthurvanittersum.github.io)\
+[Kars' portfolio page ->](https://degekkelamas.github.io/Projects)
 
 This project was made for a gamejam, where we had 48 hours to make a game. The theme of the gamejam was "future".
 
